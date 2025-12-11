@@ -8,6 +8,10 @@ local path = require("neotest-golang.lib.path")
 
 local M = {}
 
+local state = {
+  root = nil,
+}
+
 --- Find a file upwards in the directory tree and return its path, if found.
 --- @param filename string Name of file to search for
 --- @param start_path string Starting directory or file path to search from
@@ -38,11 +42,14 @@ end
 --- @param folderpath string Directory path to search from
 --- @return string|nil Root directory path or nil if no go.mod files found
 function M.root_for_tests(folderpath)
+  if state.root ~= nil then
+    return state.root
+  end
   -- First, check for go.work or go.mod at cwd or above (stop at $HOME)
-  local root =
+  state.root =
     lib_neotest.files.match_root_pattern("go.work", "go.mod")(folderpath)
-  if root then
-    return root
+  if state.root then
+    return state.root
   end
 
   -- Second, find all go.mod files recursively (monorepo-style)
@@ -56,10 +63,12 @@ function M.root_for_tests(folderpath)
     return nil
   elseif #go_mod_files == 1 then
     -- Single go.mod found, return its directory
-    return path.get_directory(go_mod_files[1])
+    state.root = path.get_directory(go_mod_files[1])
+    return state.root
   else
     -- Multiple go.mod files (monorepo), return the search root
-    return folderpath
+    state.root = folderpath
+    return state.root
   end
 end
 
